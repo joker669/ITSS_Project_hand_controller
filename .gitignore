@@ -1,0 +1,7 @@
+
+models/cross-hands-tiny-prn.weights
+*.ipynb
+*.pyc
+*.cfg
+*.weights
+*.ps1
