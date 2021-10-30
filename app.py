@@ -72,8 +72,11 @@ def five_move():#手掌移动
 
 def five_move_deamon():             #five_pos_dict = {0:"no", 1:"left", 2:"right", 3: "up", 4: "down"}
     global cur_five_pos
+    global end
     pre_five_pos = 0
     while True:
+        if(end == 1):
+            return
         if(pre_five_pos != cur_five_pos):
             if(cur_five_pos == 1 and pre_five_pos == 2):
                 print("press right")
