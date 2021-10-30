@@ -70,6 +70,26 @@ def screen_shot():
 def five_move():#手掌移动
     return True, 1
 
+def five_move_deamon():             #five_pos_dict = {0:"no", 1:"left", 2:"right", 3: "up", 4: "down"}
+    global cur_five_pos
+    pre_five_pos = 0
+    while True:
+        if(pre_five_pos != cur_five_pos):
+            if(cur_five_pos == 1 and pre_five_pos == 2):
+                print("press right")
+                pyautogui.press('right') 
+            elif(cur_five_pos == 2 and pre_five_pos == 1):
+                print("press left")
+                pyautogui.press('left') 
+            elif(cur_five_pos == 3 and pre_five_pos == 4):
+                print("press pagedown")
+                pyautogui.press('pagedown') 
+            elif(cur_five_pos == 4 and pre_five_pos == 3):
+                print("press pageup")
+                pyautogui.press('pageup')  
+            pre_five_pos = cur_five_pos
+        time.sleep(0.5)
+
 def zoom_deamon():
     global lock
     global g_z_op
@@ -131,13 +151,16 @@ detector = HandDetector(detectionCon=0.8, maxHands=2)
 is_fst = 1
 pre_length = 0
 pre_five = 0# 无 0: 左 1: 右 2: 上 3: 下 4
-five_pos = {0:"no", 1:"left", 2:"right", 3: "up", 4: "down"}
+five_pos_dict = {0:"no", 1:"left", 2:"right", 3: "up", 4: "down"}
+cur_five_pos = 0
 #def main():
 #init
 g_z_op = 0
 end = 0
 zoom_d = threading.Thread(target=zoom_deamon)
 zoom_d.start()
+move_d = threading.Thread(target=five_move_deamon)
+move_d.start()
 if(1):
     cap = cv2.VideoCapture(0)
     detector = HandDetector(detectionCon=0.8, maxHands=2)
@@ -153,15 +176,19 @@ if(1):
             bbox1 = hand1["bbox"]  # Bounding box info x,y,w,h
             centerPoint1 = hand1['center']  # center of the hand cx,cy
             handType1 = hand1["type"]  # Handtype Left or Right
-            fingers1 = detector.fingersUp(hand1)
+            fingers1 = fingersUp(lmList1)
             if len(hands) == 2:
                 # Hand 2
                 hand2 = hands[1]
                 lmList2 = hand2["lmList"]  # List of 21 Landmark points
                 bbox2 = hand2["bbox"]  # Bounding box info x,y,w,h
+                print("bbox1")
+                print(bbox1)
+                print("bbox2")
+                print(bbox1)
                 centerPoint2 = hand2['center']  # center of the hand cx,cy
                 handType2 = hand2["type"]  # Hand Type "Left" or "Right"
-                fingers2 = detector.fingersUp(hand2)
+                fingers2 = fingersUp(lmList2)
                 # Find Distance between two Landmarks. Could be same hand or different hands
                 # length, info, img = detector.findDistance(lmList1[8], lmList2[8], img)  # with draw
                 # length, info = detector.findDistance(lmList1[8], lmList2[8])  # with draw
@@ -194,20 +221,15 @@ if(1):
                     print("zoom end")
 #####################################一只手手势代码####################################################
             elif(len(hands) == 1):
-                print(fingers1)
+                #print(fingers1)
                 #####################手掌手势是动态动作，特殊处理
                 if(Isfive(fingers1) == True):
-                    if(is_fst == 1):
-                        is_fst = 0
-                        pre_five = reg_five(lmList1)
-                        print(five_pos[pre_five])
-                    else:
-                        cur_five = reg_five(lmList1)
-                        print(five_pos[cur_five]) 
+                    five_pos_temp = reg_five(lmList1)
+                    cur_five_pos = five_pos_temp
                 else:
-                    is_fst = 1
+                    cur_five_pos = 0
                 #stop_time = -1
-                Is_stop = -1 #stop要进行处理，触发后保持一段时间(1s)stop是1
+                Is_stop = -1 #stop要进行处理
                 ######################其余静态手势动作
                 if(Is_stop == 0):
                     pos,time = posture(hand1, fingers1)
@@ -222,8 +244,8 @@ if(1):
         if k == 27:
             end = 1
             break
-        
-        
+            
+move_d.join()
 zoom_d.join()
 cap.release()
 cv2.destroyAllWindows()
