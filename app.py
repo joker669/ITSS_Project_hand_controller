@@ -1,9 +1,15 @@
-from cvzone.HandTrackingModule import HandDetector
-import threading,time
+import threading
+import time
+
 import cv2
-from math import *
 import pyautogui
+from comtypes import CLSCTX_ALL
+from ctypes import cast, POINTER
+from cvzone.HandTrackingModule import HandDetector
 from ITSS_Util import *
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+import operator
+import numpy as np
 '''
 上下左右，大拇指
 音量 调整    gun
@@ -15,24 +21,84 @@ gestrue_dict = {0: "fist", 1: "five", 2: "gundown", 3: "gunup", 4: "one", 5: "th
 
 
 #静态姿势
-def Isthumbup():
+# 静态姿势
+def Isthumbup(lmList, fingers):
+    """
+
+    :return:
+    """
+    upList1 = [1, 0, 0, 0, 0]
+    AB = [lmList[4][0], lmList[4][1], lmList[17][0], lmList[17][1]]
+    CD = [0, 1, 0, 0]
+    ang = angle(AB, CD)
+    flag_s = 0
+    if ang > 120:
+        flag_s = 1
+    if operator.eq(fingers, upList1) and flag_s == 1:
+        return True
 
     return False
 
-def Isthumbright():
+
+def Isthumbright(lmList, fingers):
+    upList1 = [1, 0, 0, 0, 0]
+    AB = [lmList[4][0], lmList[4][1], lmList[17][0], lmList[17][1]]
+    CD = [1, 0, 0, 0]
+    ang = angle(AB, CD)
+    flag_s = 0
+    if ang > 120:
+        flag_s = 1
+    if operator.eq(fingers, upList1) and flag_s == 1:
+        return True
     return False
 
-def Isthumbleft():
+
+def Isthumbleft(lmList, fingers):
+    """
+
+    :return:
+    """
+    upList1 = [1, 0, 0, 0, 0]
+    AB = [lmList[4][0], lmList[4][1], lmList[17][0], lmList[17][1]]
+    CD = [1, 0, 0, 0]
+    ang = angle(AB, CD)
+    flag_s = 0
+    if 60 > ang:
+        flag_s = 1
+    if operator.eq(fingers, upList1) and flag_s == 1:
+        return True
     return False
 
 
-def Isthumbdown():
-    return False
-    
-def Isgunup():
+def Isthumbdown(lmList, fingers):
+    upList1 = [1, 0, 0, 0, 0]
+    AB = [lmList[4][0], lmList[4][1], lmList[17][0], lmList[17][1]]
+    CD = [0, 1, 0, 0]
+    ang = angle(AB, CD)
+    flag_s = 0
+    if 60 > ang :
+        flag_s = 1
+    if operator.eq(fingers, upList1) and flag_s == 1:
+        return True
     return False
 
-def Isgundown():
+def Isgun(fingers):
+    upList1 = [1, 1, 0, 0, 0]
+    if operator.eq(fingers, upList1):
+        return True
+    return False
+
+def Isgunup(lmList, fingers):
+    upList1 = [1, 1, 0, 0, 0]
+    if operator.eq(fingers, upList1) and lmList[0][1] > lmList[8][1]:
+        return True
+    return False
+
+
+def Isgundown(lmList, fingers):
+    upList1 = [1, 1, 0, 0, 0]
+    if operator.eq(fingers, upList1) and lmList[0][1] < lmList[8][1]:
+        return True
     return False
 
 #动态姿势
@@ -55,13 +121,75 @@ def Isfist(hand):
 
 
 #静态姿势
-def op_move():#输入姿势  5: "thumbdown", 6: "thumbleft", 7: "thumbright", 8: "thumbup"
-    #模拟指令输出
-    return True, 1
+def op_move(lmList, fingers):  # 输入姿势  5: "thumbdown", 6: "thumbleft", 7: "thumbright", 8: "thumbup"
+    # 模拟指令输出
+    # 右手
+    # 向左 330 - 360 | 0 - 30
+    # 向右 120 - 180
+    # 向上 90  - 30
+    # 向下 270 - 330
+    # 左手
+    # 向左 0-60
+    # 向上 90-140
+    # 向右 150-200
+    # 向下 230-270
+    if Isthumbdown(lmList, fingers):
+        print("thumbdown")
+        # down
+        pyautogui.press('down')
+        return True
+    elif Isthumbup(lmList, fingers):
+        # up
+        pyautogui.press('up')
+        print("thumbup")
+        return True
+    elif Isthumbleft(lmList, fingers):
+        # right
+        pyautogui.press('right')
+        print("thumbleft")
+        return True
+    elif Isthumbright(lmList, fingers):
+        # left
+        pyautogui.press('left')
+        print("thumbright")
+        return True
+    return False
 
-def vol_adjust():#输入姿势  5: "thumbdown", 6: "thumbleft", 7: "thumbright", 8: "thumbup"
-    ##模拟指令输出
-    return True, 1
+def vol_adjust(lmList, fingers, volume):  # 输入姿势  5: "thumbdown", 6: "thumbleft", 7: "thumbright", 8: "thumbup"
+    # 当前音量
+    vl = volume.GetMasterVolumeLevel()
+    # 获取音量范围
+    volRange = volume.GetVolumeRange()
+    minVol = volRange[0]
+    maxVol = volRange[1]
+    #print(volRange)
+    # 插值获取长度
+    length = np.interp(vl, [minVol, maxVol], [50, 300])
+    '''
+    右手:  向上gun 拳心朝摄像头 [1,1,0,0,0] 朝面[0,1,0,0,0] 向下gun(仅拳心朝面) [1,0,1,1,1] | [0,0,1,1,1]
+    左手:  向上gun 拳心朝摄像头 [1,1,0,0,0] 朝面[0,1,0,0,0] 向下gun(仅拳心朝面) [1,0,1,1,1] | [0,0,1,1,1]
+    写的有问题 相当于一根食指确定是否调节音量 || 已修复
+    :param detector:
+    :param allHands:
+    :return:
+    '''
+    if Isgunup(lmList, fingers):
+        #print("gunup")
+        vol = np.interp(length+1, [50, 300], [minVol, maxVol])
+        volume.SetMasterVolumeLevel(vol, None)
+        #print(int(length), vol)
+        # volume_up
+        return True
+    elif Isgundown(lmList, fingers):
+        # volume_down
+        #print("gundown")
+        vol = np.interp(length-1, [50, 300], [minVol, maxVol])
+        volume.SetMasterVolumeLevel(vol, None)
+        #print(int(length), vol)
+        return True
+    else:
+        return False
+    return False
 
 def screen_shot():
     return True, 1
@@ -73,10 +201,20 @@ def five_move():#手掌移动
 def five_move_deamon():             #five_pos_dict = {0:"no", 1:"left", 2:"right", 3: "up", 4: "down"}
     global cur_five_pos
     global end
+    global scrn_shot
     pre_five_pos = 0
     while True:
         if(end == 1):
             return
+        if(scrn_shot == 1):
+            print("screen_shot")
+            im1 = pyautogui.screenshot("screen_shot.png")
+            im1 = cv2.imread("screen_shot.png")
+            cv2.imshow("Screen shot", im1)
+            cv2.waitKey(1)
+            time.sleep(3)
+            cv2.destroyWindow("Screen shot")
+            scrn_shot = 0
         if(pre_five_pos != cur_five_pos):
             if(cur_five_pos == 1 and pre_five_pos == 2):
                 print("press right")
@@ -150,7 +288,13 @@ hand_pos_list = []
 
 cap = cv2.VideoCapture(0)
 detector = HandDetector(detectionCon=0.8, maxHands=2)
-###这里初始化全局遍历
+###这里初始化全局变量
+scrn_shot = 0
+# volume setting
+devices = AudioUtilities.GetSpeakers()
+interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+volume = cast(interface, POINTER(IAudioEndpointVolume))
+mute = volume.GetMute()
 is_fst = 1
 pre_length = 0
 pre_five = 0# 无 0: 左 1: 右 2: 上 3: 下 4
@@ -158,6 +302,7 @@ five_pos_dict = {0:"no", 1:"left", 2:"right", 3: "up", 4: "down"}
 cur_five_pos = 0
 #def main():
 #init
+wCam, hCam = 240, 360
 g_z_op = 0
 end = 0
 zoom_d = threading.Thread(target=zoom_deamon)
@@ -166,6 +311,8 @@ move_d = threading.Thread(target=five_move_deamon)
 move_d.start()
 if(1):
     cap = cv2.VideoCapture(0)
+    cap.set(3, wCam)
+    cap.set(4, hCam)
     detector = HandDetector(detectionCon=0.8, maxHands=2)
     while True:
         success, img = cap.read() #get hand map
@@ -197,6 +344,18 @@ if(1):
                 # length, info = detector.findDistance(lmList1[8], lmList2[8])  # with draw
 ######################################2只手手势代码##############################################################
             if(len(hands) == 2):
+                if(Isgun(fingers1) == True and Isgun(fingers2) == True):
+                    print("gun")
+                    if(handType2 == "Left" and handType1 == "Right"):
+                        print("scccccccccccccccccccc")
+                        scrn_shot = 1
+                    elif(handType1 == "Left" and handType2 == "Right"):
+                        print("scccccccccccccccccccc")
+                        scrn_shot = 1
+                    else:
+                        scrn_shot = 0
+                else:
+                    scrn_shot = 0
                 ###################################两只手控制缩放代码
                 if(Isone(fingers1) == True and Isone(fingers2) == True):     #进入zoom in out
                     if(is_fst == 1):    ###判断是否是第一次
@@ -224,24 +383,21 @@ if(1):
                     print("zoom end")
 #####################################一只手手势代码####################################################
             elif(len(hands) == 1):
-                #print(fingers1)
+                ok = False
                 #####################手掌手势是动态动作，特殊处理
                 if(Isfive(fingers1) == True):
                     five_pos_temp = reg_five(lmList1)
                     cur_five_pos = five_pos_temp
+                    ok = True
                 else:
+                    ok = False
                     cur_five_pos = 0
-                #stop_time = -1
-                Is_stop = -1 #stop要进行处理
-                ######################其余静态手势动作
-                if(Is_stop == 0):
-                    pos,time = posture(hand1, fingers1)
-                    stop_time = time                        #静态姿势
-                    try:
-                        act_func = gestrue_switch[pos]
-                        act_func()
-                    except:
-                        pass
+                ####################其他静态手势
+                if(ok == False):
+                    ok = op_move(lmList1, fingers1)
+                if(ok == False):
+                    ok = vol_adjust(lmList1, fingers1, volume)
+                ################################
         cv2.imshow("Image", img)
         k = cv2.waitKey(1) & 0xff
         if k == 27:
