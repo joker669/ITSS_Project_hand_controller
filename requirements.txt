@@ -1,0 +1,11 @@
+comtypes==1.1.10
+cvzone==1.5.2
+imutils==0.5.4
+matplotlib==3.4.2
+numpy==1.20.3
+opencv_python==4.5.3.56
+PyAutoGUI==0.9.53
+pycaw==20181226
+scikit_learn==1.0.1
+tensorflow==2.7.0
+tensorflow_gpu==2.4.1

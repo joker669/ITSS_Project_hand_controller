@@ -1,5 +1,7 @@
 # ITSS_Project_hand_controller
 
+don't forget to install requirements before runing this demo
+run "pip install -r ./requirements.txt"
 ##APP
 If you want to try the app
 click APP ->> app.bat
