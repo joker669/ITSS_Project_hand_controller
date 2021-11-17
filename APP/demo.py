@@ -213,6 +213,7 @@ while rval:
             try:
                 frame,bbox,ok = gesture_detect(frame, model, yolo)
             except:
+                pass
                 #print("2")
             if(ok == 1):
                 #print("13")

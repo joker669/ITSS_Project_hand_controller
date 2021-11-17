@@ -317,7 +317,7 @@ if(1):
     while True:
         success, img = cap.read() #get hand map
         hands, img = detector.findHands(img)  # with draw#每一帧得到手的21点
-        # hands = detector.findHands(img, draw=False)  
+        #hands = detector.findHands(img, draw=False)  
         # without draw
         if hands:
             # Hand 1

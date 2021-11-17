@@ -56,18 +56,12 @@ def Isthumbright(hand):
     upList1 = [1, 0, 0, 0, 0]
     type_hand = hand["type"]
 
-    AB = [lmList[4][0], lmList[4][1], lmList[0][0], lmList[0][1]]
+    AB = [lmList[4][0], lmList[4][1], lmList[17][0], lmList[17][1]]
     CD = [1, 0, 0, 0]
-    ang = angle_full(AB, CD)
+    ang = angle(AB, CD)
     flag_s = 0
-
-    if type_hand == "Right":
-        if 180 > ang > 120:
-            flag_s = 1
-    else:
-        if 200 > ang > 150:
-            flag_s = 1
-
+    if 180 > ang > 120:
+        flag_s = 1
     if operator.eq(fingers, upList1) and flag_s == 1:
         return True
     return False
@@ -78,7 +72,6 @@ def Isthumbleft(hand):
 
     :return:
     """
-
     lmList = hand["lmList"]
     fingers = fingersUp(lmList)
     upList1 = [1, 0, 0, 0, 0]
@@ -465,7 +458,7 @@ def posture(hand, finger):
 # cap.release()
 # cv2.destroyAllWindows()
 
-wCam, hCam = 1800, 2400
+wCam, hCam = 240, 360
 
 
 def main():
